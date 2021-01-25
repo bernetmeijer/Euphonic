@@ -1,5 +1,7 @@
 import numpy as np
-import sys
+
+from euphonic.readers import phonopy
+from euphonic import ForceConstants
 
 ##### INSTRUCTIONS #####
 
@@ -94,16 +96,19 @@ def read_control(filename):
                 n_elements=line.split()[1]
                 n_elements=np.float(n_elements.replace(',', ''))
                 continue
+                
             if 'natoms' in line:
                 n_atoms=line.split()[1]
                 n_atoms=np.int(n_atoms.replace(',', ''))
                 Dict['n_atoms']=n_atoms
                 continue
+                
             if 'ngrid(:)=1 1 1' in line:
                 n_cells_in_sc=1
                 main_Dict['n_cells_in_sc']=n_cells_in_sc
                 main_Dict['sc_matrix']=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
                 continue
+                
             if 'lfactor=0.1' in line:
                 Dict['cell_vectors_unit']='angstrom'
                 continue
@@ -112,10 +117,12 @@ def read_control(filename):
                 lst=line.split()[1:4]
                 cell_vectors.append([float(i) for i in lst])
                 continue
+                
             if 'lattvec(:,2)' in line:
                 lst=line.split()[1:4]
                 cell_vectors.append([float(i) for i in lst])
                 continue
+                
             if 'lattvec(:,3)' in line:
                 lst=line.split()[1:4]
                 cell_vectors.append([float(i) for i in lst])
@@ -131,7 +138,7 @@ def read_control(filename):
                     el=term.replace('"', '')
                     elements.append(el)
                 elements=np.array(elements)
-            
+
             if 'types' in line:
                 atom_type=[]
                 for term in line.split()[1:-1]:
@@ -181,7 +188,7 @@ def read_control(filename):
     return main_Dict
 
 
-# create dictionary
+# combine everything
 def read_gulp(CONTROL_file, FORCE_CONSTANTS_file):
     main_Dict=read_control(CONTROL_file)
     n_atoms=main_Dict['crystal']['n_atoms']
@@ -192,22 +199,4 @@ def read_gulp(CONTROL_file, FORCE_CONSTANTS_file):
     main_Dict['force_constants']=force_constants
     main_Dict['force_constants_unit']='hartree / bohr ** 2'
     
-    return main_Dict
-
-
-######
-
-# DO IT #
-
-######
-
-control_file=sys.argv[1]
-force_file=sys.argv[2]
-
-fcdict=read_gulp(control_file, force_file)
-
-from euphonic import ForceConstants
-
-fc=ForceConstants.from_dict(fcdict)
-fc.to_json_file('force_constants2.json')
-
+    return ForceConstants.from_dict(main_Dict)
